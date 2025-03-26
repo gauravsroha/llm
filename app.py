@@ -20,11 +20,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 security = HTTPBasic()
 
-# Configuration
 USERNAME = "admin"
 PASSWORD = "Gaurav"
 API_KEY = os.environ.get("API_KEY", "Gaurav@08")  
-
 
 api_key_header = APIKeyHeader(name="X-API-Key")
 
@@ -141,19 +139,22 @@ def download_and_load_model():
         
         logger.info("Loading model...")
         try:
-            # First try with device_map if accelerate is available
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_path,
                 torch_dtype=torch.float16,
                 device_map="auto" if torch.cuda.is_available() else None
             )
         except ImportError:
-            # Fall back to simpler loading method if accelerate isn't available
             logger.info("Accelerate not available, loading model without device_map...")
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_path,
                 torch_dtype=torch.float16
             )
+        
+        logger.info("Model loaded successfully!")
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        raise
 
 class ClassificationRequest(BaseModel):
     text: str
@@ -196,7 +197,6 @@ async def startup_event():
     thread.daemon = True
     thread.start()
 
-# For RunPod, we need to listen on 0.0.0.0 and port 8000
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=False)
