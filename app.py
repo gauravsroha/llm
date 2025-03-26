@@ -140,16 +140,20 @@ def download_and_load_model():
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         
         logger.info("Loading model...")
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_path,
-            torch_dtype=torch.float16,
-            device_map="auto" if torch.cuda.is_available() else None
-        )
-        
-        logger.info("Model loaded successfully!")
-    except Exception as e:
-        logger.error(f"Error loading model: {str(e)}")
-        raise
+        try:
+            # First try with device_map if accelerate is available
+            model = AutoModelForSequenceClassification.from_pretrained(
+                model_path,
+                torch_dtype=torch.float16,
+                device_map="auto" if torch.cuda.is_available() else None
+            )
+        except ImportError:
+            # Fall back to simpler loading method if accelerate isn't available
+            logger.info("Accelerate not available, loading model without device_map...")
+            model = AutoModelForSequenceClassification.from_pretrained(
+                model_path,
+                torch_dtype=torch.float16
+            )
 
 class ClassificationRequest(BaseModel):
     text: str
